@@ -13,6 +13,7 @@
 #include "locker.h"
 #include "threadpool.h"
 #include "http_conn.h"
+#include "mysqlpool/mysqlpool.h"
 
 #define MAX_FD 65536
 #define MAX_EVENT_NUMBER 10000
@@ -43,19 +44,19 @@ void show_error( int connfd, const char* info )
 
 int main( int argc, char* argv[] )
 {
-    if( argc <= 2 )
+    if( argc < 2 )
     {
         printf( "usage: %s ip_address port_number\n", basename( argv[0] ) );
         return 1;
     }
-    const char* ip = argv[1];
-    int port = atoi( argv[2] );
+    const char* ip = "localhost";
+    int port = atoi( argv[1] );
 
     addsig( SIGPIPE, SIG_IGN );
 
     //需要用::获取静态成员函数
-    shared_ptr<threadpool<http_conn>> pool = threadpool<http_conn>::createpool();
-
+    mysqlPool* mysqlpool = mysqlPool::getmysqlPool();
+    unique_ptr<threadpool<http_conn>> threadPool(threadpool<http_conn>::createpool( mysqlpool, 100, 10000 ));
     http_conn* users = new http_conn[ MAX_FD ]; //任务数组
     assert( users );
     int user_count = 0;
@@ -96,6 +97,7 @@ int main( int argc, char* argv[] )
             break;
         }
 
+        //单reactor, 负责接收客户端的连接，多线程，负责读取客户端的请求和发送响应
         for ( int i = 0; i < number; i++ )
         {
             int sockfd = events[i].data.fd;
@@ -109,13 +111,14 @@ int main( int argc, char* argv[] )
                     printf( "errno is: %d\n", errno );
                     continue;
                 }
-                if( http_conn::m_user_count >= MAX_FD )
+                if( http_conn::m_user_count >= MAX_FD )     //超过了最大上限65536
                 {
                     show_error( connfd, "Internal server busy" );
                     continue;
                 }
                 
                 users[connfd].init( connfd, client_address );   //放到对应的任务数组中，并把connfd和地址传给对应的任务
+                std::cout << "connected" << endl;
             }
             else if( events[i].events & ( EPOLLRDHUP | EPOLLHUP | EPOLLERR ) )  //如果检测到错误或者客户端关闭
             {
@@ -125,7 +128,7 @@ int main( int argc, char* argv[] )
             {
                 if( users[sockfd].read() )  //读取客户端发过来的消息，也就是http协议
                 {
-                    pool->append( users + sockfd ); //将对应的任务加入任务列表中，让线程池里的线程去解析http协议，并写回给客户端
+                    threadPool->append( users + sockfd ); //将对应的任务加入任务列表中，让线程池里的线程去解析http协议，并写回给客户端
                 }
                 else
                 {
@@ -139,8 +142,6 @@ int main( int argc, char* argv[] )
                     users[sockfd].close_conn();
                 }
             }
-            else
-            {}
         }
     }
 

@@ -1,0 +1,11 @@
+{
+    "ip" : "localhost",
+    "port" : 3306,
+    "user" : "root",
+    "password" : "lxb592.com",
+    "db" : "yourdb",
+    "minUser" : 5,
+    "maxUser" : 80,
+    "timeout" : 1000,
+    "maxFreeTime" : 1000
+}

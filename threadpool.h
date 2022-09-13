@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <memory>
 #include "locker.h"
+#include "mysqlpool/mysqlpool.h"
 
 using namespace std;
 
@@ -20,11 +21,11 @@ public:
     ~threadpool();
     bool append( T* request );
     //单例模式
-    static shared_ptr<threadpool<T>> createpool(int thread_number = 8, int max_requests = 10000);
+    static threadpool<T>* createpool( mysqlPool* mysqlpool, int thread_number = 8, int max_requests = 10000);
 
 private:
     //构造函数
-    threadpool( int thread_number = 8, int max_requests = 10000 );
+    threadpool( mysqlPool* mysqlpool, int thread_number = 8, int max_requests = 10000 );
     static void* worker( void* arg );
     void run();
 
@@ -36,20 +37,19 @@ private:
     locker m_queuelocker;
     sem m_queuestat;
     bool m_stop;
-    static shared_ptr<threadpool<T>> instance;
+    unique_ptr<mysqlPool> m_mysqlpool;
 };
 
-template <typename T>
-shared_ptr<threadpool<T>> threadpool<T>::instance = nullptr;
-
 template< typename T >
-threadpool< T >::threadpool( int thread_number, int max_requests ) : 
+threadpool< T >::threadpool( mysqlPool* mysqlpool, int thread_number, int max_requests ) : 
         m_thread_number( thread_number ), m_max_requests( max_requests ), m_stop( false ), m_threads( NULL )
 {
     if( ( thread_number <= 0 ) || ( max_requests <= 0 ) )
     {
         throw std::exception();
     }
+
+    m_mysqlpool.reset(mysqlpool);
 
     m_threads = new pthread_t[ m_thread_number ];
     if( ! m_threads )
@@ -59,7 +59,7 @@ threadpool< T >::threadpool( int thread_number, int max_requests ) :
 
     for ( int i = 0; i < thread_number; ++i )
     {
-        printf( "create the %dth thread\n", i );
+        // printf( "create the %dth thread\n", i );
         //向worker函数中传递 this指针，因为worker函数是静态成员函数，要使用非静态成员变量可以通过this进行访问
         if( pthread_create( m_threads + i, NULL, worker, this ) != 0 )  
         {
@@ -123,24 +123,18 @@ void threadpool< T >::run()
         {
             continue;
         }
+        shared_ptr<mysqlconn> conn = m_mysqlpool->getconnection();
+        request->getconnection(conn);
         request->process();
     }
 }
 
 //默认参数在函数声明和定义只写一次
 template<typename T>
-shared_ptr<threadpool<T>> threadpool<T>::createpool(int thread_number, int max_requests)
+threadpool<T>* threadpool<T>::createpool(mysqlPool* mysqlpool, int thread_number, int max_requests)
 {
-    if(instance == NULL){
-        try{
-            //用make_shared会没有权限访问，可以通过reset进行内存分配
-            instance.reset(new threadpool<T>(thread_number, max_requests));
-        }
-        catch(...) {
-            return nullptr;
-        }
-    }   
-    return instance;
+    static threadpool<T> instance(mysqlpool, thread_number, max_requests);
+    return &instance;
 }
 
 #endif
