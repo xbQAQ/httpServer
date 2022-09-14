@@ -31,7 +31,7 @@ class http_conn
 public:
     static const int FILENAME_LEN = 200;    //文件名长度
     static const int READ_BUFFER_SIZE = 2048;   //读缓冲区大小
-    static const int WRITE_BUFFER_SIZE = 1024;  //写缓冲区大小
+    static const int WRITE_BUFFER_SIZE = 2048;  //写缓冲区大小
     enum METHOD { GET = 0, POST, HEAD, PUT, DELETE, TRACE, OPTIONS, CONNECT, PATCH };
     //主状态机的可能状态：当前正在分析请求行，当前正在分析头部字段，当前正在分析请求体
     enum CHECK_STATE { CHECK_STATE_REQUESTLINE = 0, CHECK_STATE_HEADER, CHECK_STATE_CONTENT };

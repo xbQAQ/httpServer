@@ -20,6 +20,7 @@
 
 extern int addfd( int epollfd, int fd, bool one_shot );
 extern int removefd( int epollfd, int fd );
+extern int setnonblocking( int fd );
 
 void addsig( int sig, void( handler )(int), bool restart = true )
 {
