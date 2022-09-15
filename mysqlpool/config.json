@@ -6,6 +6,6 @@
     "db" : "yourdb",
     "minUser" : 5,
     "maxUser" : 80,
-    "timeout" : 1000,
-    "maxFreeTime" : 1000
+    "timeout" : 10000,
+    "maxFreeTime" : 50000
 }

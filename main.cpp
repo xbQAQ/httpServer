@@ -57,15 +57,21 @@ int main( int argc, char* argv[] )
 
     //需要用::获取静态成员函数
     mysqlPool* mysqlpool = mysqlPool::getmysqlPool();
-    unique_ptr<threadpool<http_conn>> threadPool(threadpool<http_conn>::createpool( mysqlpool, 100, 10000 ));
+    unique_ptr<threadpool<http_conn>> threadPool(threadpool<http_conn>::createpool( mysqlpool, 100, 1000 ));
     http_conn* users = new http_conn[ MAX_FD ]; //任务数组
     assert( users );
     int user_count = 0;
 
     int listenfd = socket( PF_INET, SOCK_STREAM, 0 );
     assert( listenfd >= 0 );
-    struct linger tmp = { 1, 0 };
-    setsockopt( listenfd, SOL_SOCKET, SO_LINGER, &tmp, sizeof( tmp ) );
+
+    //设置断开方式，罪魁祸首！
+    //当设置为1,0时，这种方式下，在调用close的时候同样会立刻返回，但不会发送未发送完成的数据，
+    //而是通过一个REST包强制的关闭socket描述符，也就是强制的退出。
+    //struct linger.l_onoff = 1,指定套接字在关闭socket函数调用后是否应在指定的时间段内保持打开状态，以允许发送排队的数据, 0表示不打开，非0表示打开
+    //struct linger.l_linger = 0, 此成员指定在关闭socket函数调用以允许发送排队数据后保持打开状态的时间。
+    // struct linger tmp = { 1, 0 };
+    // setsockopt( listenfd, SOL_SOCKET, SO_LINGER, &tmp, sizeof( tmp ) );
 
     int reuse = 1;
     setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
@@ -80,11 +86,11 @@ int main( int argc, char* argv[] )
     ret = bind( listenfd, ( struct sockaddr* )&address, sizeof( address ) );
     assert( ret >= 0 );
 
-    ret = listen( listenfd, 5 );
+    ret = listen( listenfd, 10 );
     assert( ret >= 0 );
 
     epoll_event events[ MAX_EVENT_NUMBER ];
-    int epollfd = epoll_create( 5 );
+    int epollfd = epoll_create( 10 );
     assert( epollfd != -1 );
     addfd( epollfd, listenfd, false );
     http_conn::m_epollfd = epollfd;

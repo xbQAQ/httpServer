@@ -53,7 +53,7 @@ bool mysqlconn::connect(std::string user, std::string password, std::string db, 
         return false;
     }
     else{
-        printf("mysql connect finished\n");
+        // printf("mysql connect finished\n");
     }
     set_character();
     return true;
@@ -265,7 +265,7 @@ std::shared_ptr<mysqlconn> mysqlPool::getconnection()
         curFreeUser++;
         curUser--;
     });
-    printf("std::shared_ptr<mysqlconn> conn = %p\n", conn);
+    // printf("std::shared_ptr<mysqlconn> conn = %p\n", conn);
     mysqlQ.pop();
     produceCond.notify_one();
     curFreeUser--;

@@ -29,7 +29,7 @@
 class http_conn
 {
 public:
-    static const int FILENAME_LEN = 200;    //文件名长度
+    static const int FILENAME_LEN = 2000;    //文件名长度
     static const int READ_BUFFER_SIZE = 2048;   //读缓冲区大小
     static const int WRITE_BUFFER_SIZE = 2048;  //写缓冲区大小
     enum METHOD { GET = 0, POST, HEAD, PUT, DELETE, TRACE, OPTIONS, CONNECT, PATCH };
@@ -111,6 +111,8 @@ private:
     struct stat m_file_stat;    //目标文件的状态。通过它我们可以判断文件是否存在，是否为目录，是否可读，并获取文件大小等信息
     struct iovec m_iv[2];       //采用writev来执行写操作，所以定义下面两个成员
     int m_iv_count;             //m_iv_count表示写内存块的数量
+    int bytes_to_send;          //将要发送的数据大小
+    int bytes_have_send;        //即将发送的数据大小
     std::shared_ptr<mysqlconn> m_connection;  //数据库连接
 };
 
