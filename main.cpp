@@ -65,7 +65,7 @@ int main( int argc, char* argv[] )
     int listenfd = socket( PF_INET, SOCK_STREAM, 0 );
     assert( listenfd >= 0 );
 
-    //设置断开方式，罪魁祸首！
+    //设置断开方式
     //当设置为1,0时，这种方式下，在调用close的时候同样会立刻返回，但不会发送未发送完成的数据，
     //而是通过一个REST包强制的关闭socket描述符，也就是强制的退出。
     //struct linger.l_onoff = 1,指定套接字在关闭socket函数调用后是否应在指定的时间段内保持打开状态，以允许发送排队的数据, 0表示不打开，非0表示打开
